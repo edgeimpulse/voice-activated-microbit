@@ -27,6 +27,7 @@
 #include <unistd.h>
 #include <stdarg.h>
 #include "ei_classifier_porting.h"
+#include "MicroBit.h"
 
 __attribute__((weak)) EI_IMPULSE_ERROR ei_run_impulse_check_canceled() {
     return EI_IMPULSE_OK;
@@ -40,7 +41,7 @@ __attribute__((weak)) EI_IMPULSE_ERROR ei_sleep(int32_t time_ms) {
 }
 
 uint64_t ei_read_timer_ms() {
-    return 0;
+    return system_timer_current_time();
 }
 
 uint64_t ei_read_timer_us() {

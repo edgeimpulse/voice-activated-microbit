@@ -43,12 +43,14 @@ void
 onButtonA(MicroBitEvent)
 {
     uBit.display.print("Aa");
+    uBit.serial.printf("A\n");
 }
 
 void
 onButtonB(MicroBitEvent)
 {
     uBit.display.print("Bb");
+    uBit.serial.printf("B\n");
 }
 
 void
@@ -77,7 +79,7 @@ void
 button_test4()
 {
     uBit.messageBus.setListenerDeletionCallback(listenerRemoved);
-    
+
     uBit.messageBus.listen(DEVICE_ID_BUTTON_A, DEVICE_BUTTON_EVT_CLICK, onButtonA);
     uBit.messageBus.listen(DEVICE_ID_BUTTON_B, DEVICE_BUTTON_EVT_CLICK, onButtonB);
     uBit.messageBus.listen(DEVICE_ID_BUTTON_AB, DEVICE_BUTTON_EVT_CLICK, onButtonAB);
@@ -89,5 +91,3 @@ button_test4()
     while(1)
         uBit.sleep(1000);
 }
-
-
