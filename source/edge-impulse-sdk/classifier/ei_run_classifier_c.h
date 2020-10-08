@@ -20,22 +20,21 @@
  * SOFTWARE.
  */
 
-#ifndef _EI_CLASSIFIER_CONFIG_H_
-#define _EI_CLASSIFIER_CONFIG_H_
+#ifndef _EDGE_IMPULSE_RUN_CLASSIFIER_C_H_
+#define _EDGE_IMPULSE_RUN_CLASSIFIER_C_H_
 
-#ifndef EI_CLASSIFIER_TFLITE_ENABLE_CMSIS_NN
-#if defined(__MBED__)
-    #include "mbed.h"
-    #if (MBED_VERSION < MBED_ENCODE_VERSION(5, 7, 0))
-        #define EI_CLASSIFIER_TFLITE_ENABLE_CMSIS_NN      0
-    #else
-        #define EI_CLASSIFIER_TFLITE_ENABLE_CMSIS_NN      1
-    #endif // Mbed OS 5.7 version check
-#elif defined(__TARGET_CPU_CORTEX_M0) || defined(__TARGET_CPU_CORTEX_M0PLUS) || defined(__TARGET_CPU_CORTEX_M3) || defined(__TARGET_CPU_CORTEX_M4) || defined(__TARGET_CPU_CORTEX_M7)
-    #define EI_CLASSIFIER_TFLITE_ENABLE_CMSIS_NN      1
-#else
-    #define EI_CLASSIFIER_TFLITE_ENABLE_CMSIS_NN      0
-#endif
-#endif // EI_CLASSIFIER_TFLITE_ENABLE_CMSIS_NN
+#include "ei_run_classifier.h"
 
-#endif // _EI_CLASSIFIER_CONFIG_H_
+/**
+ * Run the classifier over a raw features array
+ * @param raw_features Raw features array
+ * @param raw_features_size Size of the features array
+ * @param result Object to store the results in
+ * @param debug Whether to show debug messages (default: false)
+ */
+extern "C" EI_IMPULSE_ERROR ei_run_classifier(
+    signal_t *signal,
+    ei_impulse_result_t *result,
+    bool debug = false);
+
+#endif // _EDGE_IMPULSE_RUN_CLASSIFIER_H_

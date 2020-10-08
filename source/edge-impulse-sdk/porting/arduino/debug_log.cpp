@@ -20,22 +20,15 @@
  * SOFTWARE.
  */
 
-#ifndef _EI_CLASSIFIER_CONFIG_H_
-#define _EI_CLASSIFIER_CONFIG_H_
+#include "tensorflow/lite/micro/debug_log.h"
+#include "../ei_classifier_porting.h"
+#include <stdio.h>
+#include <stdarg.h>
 
-#ifndef EI_CLASSIFIER_TFLITE_ENABLE_CMSIS_NN
-#if defined(__MBED__)
-    #include "mbed.h"
-    #if (MBED_VERSION < MBED_ENCODE_VERSION(5, 7, 0))
-        #define EI_CLASSIFIER_TFLITE_ENABLE_CMSIS_NN      0
-    #else
-        #define EI_CLASSIFIER_TFLITE_ENABLE_CMSIS_NN      1
-    #endif // Mbed OS 5.7 version check
-#elif defined(__TARGET_CPU_CORTEX_M0) || defined(__TARGET_CPU_CORTEX_M0PLUS) || defined(__TARGET_CPU_CORTEX_M3) || defined(__TARGET_CPU_CORTEX_M4) || defined(__TARGET_CPU_CORTEX_M7)
-    #define EI_CLASSIFIER_TFLITE_ENABLE_CMSIS_NN      1
-#else
-    #define EI_CLASSIFIER_TFLITE_ENABLE_CMSIS_NN      0
-#endif
-#endif // EI_CLASSIFIER_TFLITE_ENABLE_CMSIS_NN
-
-#endif // _EI_CLASSIFIER_CONFIG_H_
+// On mbed platforms, we set up a serial port and write to it for debug logging.
+#if defined(__cplusplus) && EI_C_LINKAGE == 1
+extern "C"
+#endif // defined(__cplusplus) && EI_C_LINKAGE == 1
+void DebugLog(const char* s) {
+    ei_printf("%s", s);
+}

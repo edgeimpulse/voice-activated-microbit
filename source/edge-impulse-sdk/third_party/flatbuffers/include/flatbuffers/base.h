@@ -53,7 +53,7 @@
   #include <functional>
 #endif
 
-#include "edge-impulse-sdk/third_party/flatbuffers/include/flatbuffers/stl_emulation.h"
+#include "flatbuffers/stl_emulation.h"
 
 #if defined(__ICCARM__)
 #include <intrinsics.h>

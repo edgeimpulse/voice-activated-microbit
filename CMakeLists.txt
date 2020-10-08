@@ -232,7 +232,7 @@ endif()
 
 add_definitions(-DEIDSP_USE_CMSIS_DSP=1 -DEIDSP_QUANTIZE_FILTERBANK=0 -DARM_MATH_LOOPUNROLL)
 
-#Edge impulse SDK include directories 
+#Edge impulse SDK include directories
 include_directories(${PROJECT_SOURCE_DIR}/source/edge-impulse-sdk)
 include_directories(${PROJECT_SOURCE_DIR}/source/edge-impulse-sdk/third_party/flatbuffers/include)
 include_directories(${PROJECT_SOURCE_DIR}/source/edge-impulse-sdk/third_party/gemmlowp)
@@ -252,7 +252,22 @@ list(APPEND SOURCE_FILES ${CC_FILES})
 
 #exclude directories from source files
 set(EXCLUDE_DIR "/utensor/")
+foreach (TMP_PATH ${SOURCE_FILES})
+    string (FIND ${TMP_PATH} ${EXCLUDE_DIR} EXCLUDE_DIR_FOUND)
+    if (NOT ${EXCLUDE_DIR_FOUND} EQUAL -1)
+        list (REMOVE_ITEM SOURCE_FILES ${TMP_PATH})
+    endif ()
+endforeach(TMP_PATH)
 
+set(EXCLUDE_DIR "/edge-impulse-sdk/porting/")
+foreach (TMP_PATH ${SOURCE_FILES})
+    string (FIND ${TMP_PATH} ${EXCLUDE_DIR} EXCLUDE_DIR_FOUND)
+    if (NOT ${EXCLUDE_DIR_FOUND} EQUAL -1)
+        list (REMOVE_ITEM SOURCE_FILES ${TMP_PATH})
+    endif ()
+endforeach(TMP_PATH)
+
+set(EXCLUDE_DIR "ei_run_classifier_c")
 foreach (TMP_PATH ${SOURCE_FILES})
     string (FIND ${TMP_PATH} ${EXCLUDE_DIR} EXCLUDE_DIR_FOUND)
     if (NOT ${EXCLUDE_DIR_FOUND} EQUAL -1)

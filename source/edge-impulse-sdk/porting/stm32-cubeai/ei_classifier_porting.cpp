@@ -20,22 +20,42 @@
  * SOFTWARE.
  */
 
-#ifndef _EI_CLASSIFIER_CONFIG_H_
-#define _EI_CLASSIFIER_CONFIG_H_
+#include "main.h"
+#include "edge-impulse-sdk/porting/ei_classifier_porting.h"
+#include <stdarg.h>
+#include <stdio.h>
 
-#ifndef EI_CLASSIFIER_TFLITE_ENABLE_CMSIS_NN
-#if defined(__MBED__)
-    #include "mbed.h"
-    #if (MBED_VERSION < MBED_ENCODE_VERSION(5, 7, 0))
-        #define EI_CLASSIFIER_TFLITE_ENABLE_CMSIS_NN      0
-    #else
-        #define EI_CLASSIFIER_TFLITE_ENABLE_CMSIS_NN      1
-    #endif // Mbed OS 5.7 version check
-#elif defined(__TARGET_CPU_CORTEX_M0) || defined(__TARGET_CPU_CORTEX_M0PLUS) || defined(__TARGET_CPU_CORTEX_M3) || defined(__TARGET_CPU_CORTEX_M4) || defined(__TARGET_CPU_CORTEX_M7)
-    #define EI_CLASSIFIER_TFLITE_ENABLE_CMSIS_NN      1
-#else
-    #define EI_CLASSIFIER_TFLITE_ENABLE_CMSIS_NN      0
+__attribute__((weak)) EI_IMPULSE_ERROR ei_run_impulse_check_canceled() {
+    return EI_IMPULSE_OK;
+}
+
+__attribute__((weak)) EI_IMPULSE_ERROR ei_sleep(int32_t time_ms) {
+    HAL_Delay(time_ms);
+    return EI_IMPULSE_OK;
+}
+
+uint64_t ei_read_timer_ms() {
+    return HAL_GetTick();
+}
+
+uint64_t ei_read_timer_us() {
+    return HAL_GetTick() * 1000;
+}
+
+__attribute__((weak)) void ei_printf(const char *format, ...) {
+    va_list myargs;
+    va_start(myargs, format);
+    vprintf(format, myargs);
+    va_end(myargs);
+}
+
+__attribute__((weak)) void ei_printf_float(float f) {
+    ei_printf("%f", f);
+}
+
+#if defined(__cplusplus) && EI_C_LINKAGE == 1
+extern "C"
 #endif
-#endif // EI_CLASSIFIER_TFLITE_ENABLE_CMSIS_NN
-
-#endif // _EI_CLASSIFIER_CONFIG_H_
+__attribute__((weak)) void DebugLog(const char* s) {
+    ei_printf("%s", s);
+}

@@ -24,7 +24,7 @@
 #define _EI_CLASSIFIER_PORTING_H_
 
 #include <stdint.h>
-#include "tensorflow/lite/micro/debug_log.h"
+#include "edge-impulse-sdk/tensorflow/lite/micro/debug_log.h"
 
 #if defined(__cplusplus) && EI_C_LINKAGE == 1
 extern "C" {
