@@ -18,10 +18,10 @@ limitations under the License.
 #include <algorithm>
 #include <limits>
 
-#include "edge-impulse-sdk/tensorflow/lite/kernels/internal/common.h"
-#include "edge-impulse-sdk/tensorflow/lite/kernels/internal/compatibility.h"
-#include "edge-impulse-sdk/tensorflow/lite/kernels/internal/cppmath.h"
-#include "edge-impulse-sdk/tensorflow/lite/kernels/internal/types.h"
+#include "tensorflow/lite/kernels/internal/common.h"
+#include "tensorflow/lite/kernels/internal/compatibility.h"
+#include "tensorflow/lite/kernels/internal/cppmath.h"
+#include "tensorflow/lite/kernels/internal/types.h"
 
 namespace tflite {
 
