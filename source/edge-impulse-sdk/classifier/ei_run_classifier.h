@@ -86,8 +86,8 @@ static ai_u8 activations[AI_NETWORK_DATA_ACTIVATIONS_SIZE];
 
 static ai_handle network = AI_HANDLE_NULL;
 #elif EI_CLASSIFIER_COMPILED == 1
-#include "edge-impulse-sdk/tensorflow/lite/c/common.h"
-#include "edge-impulse-sdk/tensorflow/lite/kernels/internal/tensor_ctypes.h"
+#include "tensorflow/lite/c/common.h"
+#include "tensorflow/lite/kernels/internal/tensor_ctypes.h"
 #include "tflite-model/trained_model_compiled.h"
 #include "edge-impulse-sdk/classifier/ei_aligned_malloc.h"
 

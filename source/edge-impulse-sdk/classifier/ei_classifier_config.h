@@ -23,8 +23,6 @@
 #ifndef _EI_CLASSIFIER_CONFIG_H_
 #define _EI_CLASSIFIER_CONFIG_H_
 
-#define EI_CLASSIFIER_TFLITE_ENABLE_CMSIS_NN 0
-
 #ifndef EI_CLASSIFIER_TFLITE_ENABLE_CMSIS_NN
 #if defined(__MBED__)
     #include "mbed.h"

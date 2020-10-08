@@ -18,7 +18,7 @@ limitations under the License.
 
 #include <vector>
 
-#include "edge-impulse-sdk/tensorflow/lite/kernels/internal/types.h"
+#include "tensorflow/lite/kernels/internal/types.h"
 
 namespace tflite {
 
