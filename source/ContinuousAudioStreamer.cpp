@@ -1,15 +1,18 @@
-
 /*
 The MIT License (MIT)
-Copyright (c) 2016 Lancaster University.
+
+Copyright (c) 2020 EdgeImpulse Inc.
+
 Permission is hereby granted, free of charge, to any person obtaining a
 copy of this software and associated documentation files (the "Software"),
 to deal in the Software without restriction, including without limitation
 the rights to use, copy, modify, merge, publish, distribute, sublicense,
 and/or sell copies of the Software, and to permit persons to whom the
 Software is furnished to do so, subject to the following conditions:
+
 The above copyright notice and this permission notice shall be included in
 all copies or substantial portions of the Software.
+
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
@@ -19,17 +22,19 @@ FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 */
 
-#include "SerialStreamer.h"
+#include "ContinuousAudioStreamer.h"
 #include "Tests.h"
+
+static inference_t inference;
 
 /**
  * Creates a simple component that logs a stream of signed 16 bit data as signed 8-bit data over serial.
  * @param source a DataSource to measure the level of.
- * @param mode the format of the serialised data. Valid options are SERIAL_STREAM_MODE_BINARY (default), SERIAL_STREAM_MODE_DECIMAL, SERIAL_STREAM_MODE_HEX.
+ * @param inference an initialized inference (with all buffers allocated of inference_t struct)
  */
-SerialStreamer::SerialStreamer(DataSource &source, int mode) : upstream(source)
+ContinuousAudioStreamer::ContinuousAudioStreamer(DataSource &source, inference_t *inference) : upstream(source)
 {
-    this->mode = mode;
+    this->_inference = inference;
 
     // Register with our upstream component
     source.connect(*this);
@@ -38,7 +43,7 @@ SerialStreamer::SerialStreamer(DataSource &source, int mode) : upstream(source)
 /**
  * Callback provided when data is ready.
  */
-int SerialStreamer::pullRequest()
+int ContinuousAudioStreamer::pullRequest()
 {
     static volatile int pr = 0;
 
@@ -61,9 +66,9 @@ int SerialStreamer::pullRequest()
 }
 
 /**
-    * returns the last buffer processed by this component
-    */
-ManagedBuffer SerialStreamer::getLastBuffer()
+ * returns the last buffer processed by this component
+ */
+ManagedBuffer ContinuousAudioStreamer::getLastBuffer()
 {
     return lastBuffer;
 }
@@ -71,53 +76,29 @@ ManagedBuffer SerialStreamer::getLastBuffer()
 /**
  * Callback provided when data is ready.
  */
-void SerialStreamer::streamBuffer(ManagedBuffer buffer)
+void ContinuousAudioStreamer::streamBuffer(ManagedBuffer buffer)
 {
     int CRLF = 0;
     int bps = upstream.getFormat();
 
-    // If a BINARY mode is requested, simply output all the bytes to the serial port.
-    if (mode == SERIAL_STREAM_MODE_BINARY)
-    {
-        uint8_t *p = &buffer[0];
-        uint8_t *end = p + buffer.length();
+    uint8_t *p = &buffer[0];
+    uint8_t *end = p + buffer.length();
 
-        while(p < end)
-            uBit.serial.putc(*p++);
-    }
+    while (p < end) {
+        uint8_t v = *p++;
 
-    // if a HEX mode is requested, format using printf, framed by sample size..
-    if (mode == SERIAL_STREAM_MODE_HEX  || mode == SERIAL_STREAM_MODE_DECIMAL)
-    {
-        uint8_t *d = &buffer[0];
-        uint8_t *end = d+buffer.length();
-        uint32_t data;
+        _inference->buffers[_inference->buf_select][_inference->buf_count++] = v;
 
-        while(d < end)
-        {
-            data = *d++;
-
-            if (bps > DATASTREAM_FORMAT_8BIT_SIGNED)
-                data |= (*d++) << 8;
-            if (bps > DATASTREAM_FORMAT_16BIT_SIGNED)
-                data |= (*d++) << 16;
-            if (bps > DATASTREAM_FORMAT_24BIT_SIGNED)
-                data |= (*d++) << 24;
-
-            if (mode == SERIAL_STREAM_MODE_HEX)
-                uBit.serial.printf("%x ", data);
-            else
-                uBit.serial.printf("%d ", data);
-
-            CRLF++;
-
-            if (CRLF == 16){
-                uBit.serial.printf("\n");
-                CRLF = 0;
+        if (_inference->buf_count >= _inference->n_samples) {
+            if (_inference->buf_ready == 1) {
+                uBit.serial.printf(
+                    "Error sample buffer overrun. Decrease the number of slices per model window "
+                    "(EI_CLASSIFIER_SLICES_PER_MODEL_WINDOW)\n");
             }
-        }
 
-        if (CRLF > 0)
-            uBit.serial.printf("\n");
+            _inference->buf_select ^= 1;
+            _inference->buf_count = 0;
+            _inference->buf_ready = 1;
+        }
     }
 }

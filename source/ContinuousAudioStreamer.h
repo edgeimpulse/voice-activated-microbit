@@ -1,15 +1,18 @@
-
 /*
 The MIT License (MIT)
-Copyright (c) 2016 Lancaster University.
+
+Copyright (c) 2020 EdgeImpulse Inc.
+
 Permission is hereby granted, free of charge, to any person obtaining a
 copy of this software and associated documentation files (the "Software"),
 to deal in the Software without restriction, including without limitation
 the rights to use, copy, modify, merge, publish, distribute, sublicense,
 and/or sell copies of the Software, and to permit persons to whom the
 Software is furnished to do so, subject to the following conditions:
+
 The above copyright notice and this permission notice shall be included in
 all copies or substantial portions of the Software.
+
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
@@ -23,19 +26,27 @@ DEALINGS IN THE SOFTWARE.
 #include "CodalConfig.h"
 #include "DataStream.h"
 
-#ifndef SERIAL_STREAMER_H
-#define SERIAL_STREAMER_H
+#ifndef CONTINUOUS_AUDIO_STREAMER_H_
+#define CONTINUOUS_AUDIO_STREAMER_H_
 
 #define SERIAL_STREAM_MODE_BINARY               1
 #define SERIAL_STREAM_MODE_DECIMAL              2
 #define SERIAL_STREAM_MODE_HEX                  3
 #define SERIAL_STREAM_MODE_NONE                 4
 
-class SerialStreamer : public DataSink
+typedef struct {
+    int8_t *buffers[2];
+    int8_t buf_select;
+    bool buf_ready;
+    unsigned int buf_count;
+    unsigned int n_samples;
+} inference_t;
+
+class ContinuousAudioStreamer : public DataSink
 {
     DataSource      &upstream;
     ManagedBuffer   lastBuffer;
-    int             mode;
+    inference_t     *_inference;
 
     public:
     /**
@@ -43,7 +54,7 @@ class SerialStreamer : public DataSink
      * @param source a DataSource to measure the level of.
      * @param mode the format of the serialised data. Valid options are SERIAL_STREAM_MODE_BINARY (default), SERIAL_STREAM_MODE_DECIMAL, SERIAL_STREAM_MODE_HEX.
      */
-    SerialStreamer(DataSource &source, int mode = SERIAL_STREAM_MODE_BINARY);
+    ContinuousAudioStreamer(DataSource &source, inference_t *inference);
 
     /**
      * Callback provided when data is ready.

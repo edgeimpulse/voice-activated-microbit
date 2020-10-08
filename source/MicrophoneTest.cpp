@@ -1,17 +1,32 @@
 #include "MicroBit.h"
-#include "SerialStreamer.h"
+#include "ContinuousAudioStreamer.h"
 #include "StreamNormalizer.h"
 #include "LevelDetector.h"
 #include "LevelDetectorSPL.h"
 #include "Tests.h"
+#include "edge-impulse-sdk/classifier/ei_run_classifier.h"
+#include "edge-impulse-sdk/dsp/numpy.hpp"
 
 static NRF52ADCChannel *mic = NULL;
-static SerialStreamer *streamer = NULL;
+static ContinuousAudioStreamer *streamer = NULL;
 static StreamNormalizer *processor = NULL;
 static LevelDetector *level = NULL;
 static LevelDetectorSPL *levelSPL = NULL;
 static int claps = 0;
 static volatile int sample;
+
+static inference_t inference;
+
+/**
+ * Get raw audio signal data
+ */
+static int microphone_audio_signal_get_data(size_t offset, size_t length, float *out_ptr)
+{
+    numpy::int8_to_float(&inference.buffers[inference.buf_select ^ 1][offset], out_ptr, length);
+
+    return 0;
+}
+
 
 void
 onLoud(MicroBitEvent)
@@ -56,17 +71,72 @@ mems_mic_test()
         //mic->setGain(7,1);        // Uncomment for v1.46.2
     }
 
+    // alloc inferencing buffers
+    inference.buffers[0] = (int8_t *)malloc(EI_CLASSIFIER_SLICE_SIZE * sizeof(int8_t));
+
+    if (inference.buffers[0] == NULL) {
+        uBit.serial.printf("Failed to alloc buffer 1\n");
+        return;
+    }
+
+    inference.buffers[1] = (int8_t *)malloc(EI_CLASSIFIER_SLICE_SIZE * sizeof(int8_t));
+
+    if (inference.buffers[0] == NULL) {
+        uBit.serial.printf("Failed to alloc buffer 2\n");
+        free(inference.buffers[0]);
+        return;
+    }
+
+    uBit.serial.printf("Allocated buffers\n");
+
+    inference.buf_select = 0;
+    inference.buf_count = 0;
+    inference.n_samples = EI_CLASSIFIER_SLICE_SIZE;
+    inference.buf_ready = 0;
+
     if (processor == NULL)
         processor = new StreamNormalizer(mic->output, 0.05f, true, DATASTREAM_FORMAT_8BIT_SIGNED);
 
     if (streamer == NULL)
-        streamer = new SerialStreamer(processor->output, SERIAL_STREAM_MODE_HEX);
+        streamer = new ContinuousAudioStreamer(processor->output, &inference);
 
     uBit.io.runmic.setDigitalValue(1);
     uBit.io.runmic.setHighDrive(true);
 
-    while(1)
-        uBit.sleep(1000);
+    uBit.serial.printf("Allocated everything else\n");
+
+    while(1) {
+        uBit.sleep(1);
+
+        if (inference.buf_ready) {
+            inference.buf_ready = 0;
+
+            static int print_results = -(EI_CLASSIFIER_SLICES_PER_MODEL_WINDOW);
+
+            signal_t signal;
+            signal.total_length = EI_CLASSIFIER_SLICE_SIZE;
+            signal.get_data = &microphone_audio_signal_get_data;
+            ei_impulse_result_t result = { 0 };
+
+            EI_IMPULSE_ERROR r = run_classifier_continuous(&signal, &result, false);
+            if (r != EI_IMPULSE_OK) {
+                uBit.serial.printf("ERR: Failed to run classifier (%d)\n", r);
+                return;
+            }
+
+            // if (++print_results >= (EI_CLASSIFIER_SLICES_PER_MODEL_WINDOW)) {
+                // print the predictions
+            uBit.serial.printf("Predictions (DSP: %d ms., Classification: %d ms.): \n",
+                    result.timing.dsp, result.timing.classification);
+            for (size_t ix = 0; ix < EI_CLASSIFIER_LABEL_COUNT; ix++) {
+                uBit.serial.printf("    %s: %d\n", result.classification[ix].label,
+                        static_cast<int>(result.classification[ix].value * 1000.0f));
+            }
+
+            //     print_results = 0;
+            // }
+        }
+    }
 }
 
 void
