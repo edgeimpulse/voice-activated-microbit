@@ -26,8 +26,8 @@
 #include <time.h>
 #include <unistd.h>
 #include <stdarg.h>
-#include "ei_classifier_porting.h"
 #include "MicroBit.h"
+#include "ei_classifier_porting.h"
 
 __attribute__((weak)) EI_IMPULSE_ERROR ei_run_impulse_check_canceled() {
     return EI_IMPULSE_OK;
@@ -49,11 +49,55 @@ uint64_t ei_read_timer_us() {
 }
 
 __attribute__((weak)) void ei_printf(const char *format, ...) {
-    /* noop */
+    va_list myargs;
+    va_start(myargs, format);
+    vprintf(format, myargs);
+    va_end(myargs);
 }
 
 __attribute__((weak)) void ei_printf_float(float f) {
-    ei_printf("%f", f);
+    float n = f;
+
+    static double PRECISION = 0.00001;
+    static int MAX_NUMBER_STRING_SIZE = 32;
+
+    char s[MAX_NUMBER_STRING_SIZE];
+
+    if (n == 0.0) {
+        strcpy(s, "0");
+    }
+    else {
+        int digit, m;
+        char *c = s;
+        int neg = (n < 0);
+        if (neg) {
+            n = -n;
+        }
+        // calculate magnitude
+        m = log10(n);
+        if (neg) {
+            *(c++) = '-';
+        }
+        if (m < 1.0) {
+            m = 0;
+        }
+        // convert the number
+        while (n > PRECISION || m >= 0) {
+            double weight = pow(10.0, m);
+            if (weight > 0 && !isinf(weight)) {
+                digit = floor(n / weight);
+                n -= (digit * weight);
+                *(c++) = '0' + digit;
+            }
+            if (m == 0 && n > 0) {
+                *(c++) = '.';
+            }
+            m--;
+        }
+        *(c) = '\0';
+    }
+
+    ei_printf("%s", s);
 }
 
 #if defined(__cplusplus) && EI_C_LINKAGE == 1

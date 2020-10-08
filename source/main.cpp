@@ -67,7 +67,8 @@ main()
 	    // analog_test();
 	    //piezo_mic_test();
 	    //piezo_clap_test();
-	    mems_mic_test();
+	    // mems_mic_test();
+        mic_inference_test();
 	    //fade_test();
 	    //showSerialNumber();
 	    //square_wave_test();
