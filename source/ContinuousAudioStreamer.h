@@ -29,11 +29,6 @@ DEALINGS IN THE SOFTWARE.
 #ifndef CONTINUOUS_AUDIO_STREAMER_H_
 #define CONTINUOUS_AUDIO_STREAMER_H_
 
-#define SERIAL_STREAM_MODE_BINARY               1
-#define SERIAL_STREAM_MODE_DECIMAL              2
-#define SERIAL_STREAM_MODE_HEX                  3
-#define SERIAL_STREAM_MODE_NONE                 4
-
 typedef struct {
     int8_t *buffers[2];
     int8_t buf_select;

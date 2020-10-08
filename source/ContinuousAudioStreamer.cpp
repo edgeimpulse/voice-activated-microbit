@@ -25,8 +25,6 @@ DEALINGS IN THE SOFTWARE.
 #include "ContinuousAudioStreamer.h"
 #include "Tests.h"
 
-static inference_t inference;
-
 /**
  * Creates a simple component that logs a stream of signed 16 bit data as signed 8-bit data over serial.
  * @param source a DataSource to measure the level of.
@@ -81,24 +79,34 @@ void ContinuousAudioStreamer::streamBuffer(ManagedBuffer buffer)
     int CRLF = 0;
     int bps = upstream.getFormat();
 
+    static int irq_counter = 0;
+    static int last_print = 0;
+
+    ++irq_counter;
+
     uint8_t *p = &buffer[0];
     uint8_t *end = p + buffer.length();
 
     while (p < end) {
-        uint8_t v = *p++;
+        int8_t data = *p++;
 
-        _inference->buffers[_inference->buf_select][_inference->buf_count++] = v;
+        _inference->buffers[_inference->buf_select][_inference->buf_count++] = data;
 
         if (_inference->buf_count >= _inference->n_samples) {
             if (_inference->buf_ready == 1) {
-                uBit.serial.printf(
-                    "Error sample buffer overrun. Decrease the number of slices per model window "
-                    "(EI_CLASSIFIER_SLICES_PER_MODEL_WINDOW)\n");
+                // uBit.serial.printf(
+                //     "Error sample buffer overrun. Decrease the number of slices per model window "
+                //     "(EI_CLASSIFIER_SLICES_PER_MODEL_WINDOW)\n");
             }
 
             _inference->buf_select ^= 1;
             _inference->buf_count = 0;
             _inference->buf_ready = 1;
+
+            // uBit.serial.printf("IRQ Counter: %d (buf length = %d), %d\n", irq_counter,
+            //     static_cast<int>(buffer.length()), system_timer_current_time() - last_print);
+            irq_counter = 0;
+            last_print = system_timer_current_time();
         }
     }
 }

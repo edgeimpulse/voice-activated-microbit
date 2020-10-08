@@ -94,6 +94,8 @@ mems_mic_test()
     inference.n_samples = EI_CLASSIFIER_SLICE_SIZE;
     inference.buf_ready = 0;
 
+    mic->output.setBlocking(true);
+
     if (processor == NULL)
         processor = new StreamNormalizer(mic->output, 0.05f, true, DATASTREAM_FORMAT_8BIT_SIGNED);
 
@@ -124,17 +126,15 @@ mems_mic_test()
                 return;
             }
 
-            // if (++print_results >= (EI_CLASSIFIER_SLICES_PER_MODEL_WINDOW)) {
+            if (++print_results >= 0) {
                 // print the predictions
-            uBit.serial.printf("Predictions (DSP: %d ms., Classification: %d ms.): \n",
-                    result.timing.dsp, result.timing.classification);
-            for (size_t ix = 0; ix < EI_CLASSIFIER_LABEL_COUNT; ix++) {
-                uBit.serial.printf("    %s: %d\n", result.classification[ix].label,
-                        static_cast<int>(result.classification[ix].value * 1000.0f));
+                uBit.serial.printf("Predictions (DSP: %d ms., Classification: %d ms.): \n",
+                        result.timing.dsp, result.timing.classification);
+                for (size_t ix = 0; ix < EI_CLASSIFIER_LABEL_COUNT; ix++) {
+                    uBit.serial.printf("    %s: %d\n", result.classification[ix].label,
+                            static_cast<int>(result.classification[ix].value * 1000.0f));
+                }
             }
-
-            //     print_results = 0;
-            // }
         }
     }
 }
