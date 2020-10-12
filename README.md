@@ -21,7 +21,18 @@ A demo application that makes your micro:bit 2 respond to your voice, built with
 
 ## How to change the keyword
 
-You can build new models using [Edge Impulse](https://docs.edgeimpulse.com/docs). Once you've trained a model go to **Deployment**, and select **C++ Library**. Then:
+You can build new models using [Edge Impulse](https://docs.edgeimpulse.com/docs).
+
+1. [Sign up for an account](https://studio.edgeimpulse.com) and open your project.
+1. Go to **Devices** and add your mobile phone.
+1. Download the [base dataset](https://cdn.edgeimpulse.com/datasets/microbit-keywords-11khz.zip) - this contains both 'noise' and 'unknown' data that you can use.
+1. Go to **Data acquisition**, and click the 'Upload' icon.
+1. Choose all the WAV items in the dataset and leave all other settings as-is.
+1. Go back to **Data acquisition** and now record your new keyword many times using your phone at frequency 11000Hz.
+1. After uploading click the three dots, select *Split sample* and click *Split* to slice your data in 1 second chunks.
+1. Follow [these steps](https://docs.edgeimpulse.com/docs/audio-classification#4-design-an-impulse) to train your model.
+
+Once you've trained a model go to **Deployment**, and select **C++ Library**. Then:
 
 1. Remove `source/edge-impulse-sdk`, `source/model-parameters` and `source/tflite-model`.
 1. Drag the content of the ZIP file into the `source` folder.

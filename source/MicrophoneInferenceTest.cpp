@@ -64,13 +64,13 @@ static void heard_keyword() {
  * Invoked when we hear something else
  */
 static void heard_other() {
-    const char * tick_emoji ="\
+    const char * empty_emoji ="\
         000,000,000,000,000\n\
-        000,000,000,000,255\n\
-        000,000,000,255,000\n\
-        255,000,255,000,000\n\
-        000,255,000,000,000\n";
-    MicroBitImage img(tick_emoji);
+        000,000,000,000,000\n\
+        000,000,255,000,000\n\
+        000,000,000,000,000\n\
+        000,000,000,000,000\n";
+    MicroBitImage img(empty_emoji);
     uBit.display.print(img);
 }
 
@@ -174,7 +174,7 @@ mic_inference_test()
                     ei_printf("\nHeard keyword: %s (%d times, needs 5)\n", INFERENCING_KEYWORD, keyword_count);
                 }
 
-                if (keyword_count >= 3) {
+                if (keyword_count >= 1) {
                     ei_printf("\n\n\nDefinitely heard keyword: \u001b[32m%s\u001b[0m\n\n\n", INFERENCING_KEYWORD);
                     last_keywords = 0;
                     heard_keyword_x_ago = 0;
