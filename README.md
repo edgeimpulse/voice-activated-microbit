@@ -4,7 +4,7 @@ A demo application that makes your micro:bit 2 respond to your voice, built with
 
 Video tutorial:
 
-![Voice-activated micro:bit](https://www.youtube.com/watch?v=fNSKWdIxh8o&feature=youtu.be)
+[![Voice-activated micro:bit](assets/video-front-v2.jpg)](https://www.youtube.com/watch?v=fNSKWdIxh8o&feature=youtu.be)
 
 ## How to build
 
