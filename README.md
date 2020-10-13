@@ -1,5 +1,7 @@
 # Voice activated micro:bit
 
+**Note: This repository depends on some repositories which will be made public later today by the Micro:bit educational foundation.**
+
 A demo application that makes your micro:bit 2 respond to your voice, built with Edge Impulse. This demo uses Machine Learning to analyze the audio feed coming from the microphone, then showing a smiley on screen when it hears "microbit".
 
 Video tutorial:
