@@ -99,15 +99,31 @@ accelerometer_inference_test()
             return;
         }
 
+        bool is_updown = false;
+
         // print the predictions
         ei_printf("Predictions (DSP: %d ms., Classification: %d ms., Anomaly: %d ms.): \n",
             result.timing.dsp, result.timing.classification, result.timing.anomaly);
         for (size_t ix = 0; ix < EI_CLASSIFIER_LABEL_COUNT; ix++) {
             ei_printf("    %s: %d\n", result.classification[ix].label, static_cast<int>(result.classification[ix].value * 1000.0f));
+            if (strcmp(result.classification[ix].label, "updown") == 0 &&
+                result.classification[ix].value > 0.8) {
+                is_updown = true;
+            }
         }
     #if EI_CLASSIFIER_HAS_ANOMALY == 1
         ei_printf("    anomaly score: %d\n", static_cast<int>(result.anomaly * 1000.0f));
+        if (result.anomaly > 0.3) {
+            is_updown = false;
+        }
     #endif
+
+        if (is_updown) {
+            heard_keyword();
+        }
+        else {
+            heard_other();
+        }
 
         uBit.sleep(2000);
     }
