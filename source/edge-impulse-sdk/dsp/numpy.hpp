@@ -1338,6 +1338,10 @@ public:
     }
 #endif
 
+#if defined ( __GNUC__ )
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wstrict-aliasing"
+#endif
     /**
      * > 50% faster then the math.h log() function
      * in return for a small loss in accuracy (0.00001 average diff with log())
@@ -1345,7 +1349,7 @@ public:
      * Licensed under the CC BY-SA 3.0
      * @param a Input number
      * @returns Natural log value of a
-     */
+     */    
     __attribute__((always_inline)) static inline float log(float a)
     {
         float m, r, s, t, i, f;
@@ -1368,6 +1372,9 @@ public:
 
         return r;
     }
+#if defined ( __GNUC__ )
+#pragma GCC diagnostic pop
+#endif    
 
     /**
      * Calculate the natural log value of a matrix. Does an in-place replacement.

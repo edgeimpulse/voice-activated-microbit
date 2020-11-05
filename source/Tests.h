@@ -86,5 +86,6 @@ void deep_sleep_test2();
 void sound_emoji_streamer();
 void flash_storage_test();
 void mic_inference_test();
+void accelerometer_inference_test();
 
 #endif
