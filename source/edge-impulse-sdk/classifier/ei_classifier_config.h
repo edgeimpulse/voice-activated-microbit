@@ -38,4 +38,16 @@
 #endif
 #endif // EI_CLASSIFIER_TFLITE_ENABLE_CMSIS_NN
 
+#if EI_CLASSIFIER_TFLITE_ENABLE_CMSIS_NN == 1
+#define CMSIS_NN                    1
+#endif
+
+#ifndef EI_CLASSIFIER_TFLITE_ENABLE_ARC
+#ifdef CPU_ARC
+#define EI_CLASSIFIER_TFLITE_ENABLE_ARC             1
+#else
+#define EI_CLASSIFIER_TFLITE_ENABLE_ARC             0
+#endif // CPU_ARC
+#endif // EI_CLASSIFIER_TFLITE_ENABLE_ARC
+
 #endif // _EI_CLASSIFIER_CONFIG_H_

@@ -20,7 +20,8 @@
  * SOFTWARE.
  */
 
-#if defined (__unix__) || (defined (__APPLE__) && defined (__MACH__))
+#include "../ei_classifier_porting.h"
+#if EI_PORTING_POSIX == 1
 
 #include <inttypes.h>
 #include <math.h>
@@ -28,7 +29,7 @@
 #include <time.h>
 #include <unistd.h>
 #include <stdarg.h>
-#include "ei_classifier_porting.h"
+#include <stdlib.h>
 
 __attribute__((weak)) EI_IMPULSE_ERROR ei_run_impulse_check_canceled() {
     return EI_IMPULSE_OK;
@@ -87,6 +88,18 @@ __attribute__((weak)) void ei_printf_float(float f) {
     ei_printf("%f", f);
 }
 
+__attribute__((weak)) void *ei_malloc(size_t size) {
+    return malloc(size);
+}
+
+__attribute__((weak)) void *ei_calloc(size_t nitems, size_t size) {
+    return calloc(nitems, size);
+}
+
+__attribute__((weak)) void ei_free(void *ptr) {
+    free(ptr);
+}
+
 #if defined(__cplusplus) && EI_C_LINKAGE == 1
 extern "C"
 #endif
@@ -94,4 +107,4 @@ __attribute__((weak)) void DebugLog(const char* s) {
     ei_printf("%s", s);
 }
 
-#endif // (__unix__) || (defined (__APPLE__) && defined (__MACH__))
+#endif // EI_PORTING_POSIX == 1
