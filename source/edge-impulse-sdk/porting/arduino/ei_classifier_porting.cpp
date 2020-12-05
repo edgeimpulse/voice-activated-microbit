@@ -20,11 +20,12 @@
  * SOFTWARE.
  */
 
-#if defined(ARDUINO)
+#include "../ei_classifier_porting.h"
+#if EI_PORTING_ARDUINO == 1
 
 #include <Arduino.h>
 #include <stdarg.h>
-#include "../ei_classifier_porting.h"
+#include <stdlib.h>
 
 #define EI_WEAK_FN __attribute__((weak))
 
@@ -65,6 +66,18 @@ __attribute__((weak)) void ei_printf_float(float f) {
     ei_printf("%f", f);
 }
 
+__attribute__((weak)) void *ei_malloc(size_t size) {
+    return malloc(size);
+}
+
+__attribute__((weak)) void *ei_calloc(size_t nitems, size_t size) {
+    return calloc(nitems, size);
+}
+
+__attribute__((weak)) void ei_free(void *ptr) {
+    free(ptr);
+}
+
 #if defined(__cplusplus) && EI_C_LINKAGE == 1
 extern "C"
 #endif
@@ -72,4 +85,4 @@ __attribute__((weak)) void DebugLog(const char* s) {
     ei_printf("%s", s);
 }
 
-#endif // defined(ARDUINO)
+#endif // EI_PORTING_ARDUINO == 1

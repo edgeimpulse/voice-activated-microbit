@@ -27,6 +27,7 @@
 #define EI_CLASSIFIER_TFLITE                     2
 #define EI_CLASSIFIER_CUBEAI                     3
 
+#define EI_CLASSIFIER_SENSOR_UNKNOWN             -1
 #define EI_CLASSIFIER_SENSOR_MICROPHONE          1
 #define EI_CLASSIFIER_SENSOR_ACCELEROMETER       2
 #define EI_CLASSIFIER_SENSOR_CAMERA              3
@@ -35,23 +36,23 @@
 #define EI_CLASSIFIER_DATATYPE_FLOAT32           1
 #define EI_CLASSIFIER_DATATYPE_INT8              9
 
-#define EI_CLASSIFIER_NN_INPUT_FRAME_SIZE        624
-#define EI_CLASSIFIER_RAW_SAMPLE_COUNT           10989
+#define EI_CLASSIFIER_NN_INPUT_FRAME_SIZE        637
+#define EI_CLASSIFIER_RAW_SAMPLE_COUNT           16000
 #define EI_CLASSIFIER_RAW_SAMPLES_PER_FRAME      1
 #define EI_CLASSIFIER_DSP_INPUT_FRAME_SIZE       (EI_CLASSIFIER_RAW_SAMPLE_COUNT * EI_CLASSIFIER_RAW_SAMPLES_PER_FRAME)
 #define EI_CLASSIFIER_INPUT_WIDTH                0
 #define EI_CLASSIFIER_INPUT_HEIGHT               0
-#define EI_CLASSIFIER_INTERVAL_MS                0.0909090909090909
+#define EI_CLASSIFIER_INTERVAL_MS                0.0625
 #define EI_CLASSIFIER_OUT_TENSOR_NAME            "y_pred/Softmax_1:0"
 #define EI_CLASSIFIER_LABEL_COUNT                3
 #define EI_CLASSIFIER_HAS_ANOMALY                0
-#define EI_CLASSIFIER_FREQUENCY                  11000
+#define EI_CLASSIFIER_FREQUENCY                  16000
 
-#define EI_CLASSIFIER_TFLITE_ARENA_SIZE          10278
+#define EI_CLASSIFIER_TFLITE_ARENA_SIZE          10316
 #define EI_CLASSIFIER_TFLITE_INPUT_DATATYPE      EI_CLASSIFIER_DATATYPE_INT8
 #define EI_CLASSIFIER_TFLITE_INPUT_QUANTIZED     1
-#define EI_CLASSIFIER_TFLITE_INPUT_SCALE         0.04182275012135506
-#define EI_CLASSIFIER_TFLITE_INPUT_ZEROPOINT     -5
+#define EI_CLASSIFIER_TFLITE_INPUT_SCALE         0.04945043846964836
+#define EI_CLASSIFIER_TFLITE_INPUT_ZEROPOINT     3
 #define EI_CLASSIFIER_TFLITE_OUTPUT_DATATYPE     EI_CLASSIFIER_DATATYPE_INT8
 #define EI_CLASSIFIER_TFLITE_OUTPUT_QUANTIZED     1
 #define EI_CLASSIFIER_TFLITE_OUTPUT_SCALE        0.00390625
@@ -127,6 +128,25 @@ typedef struct {
     float spectral_peaks_threshold;
     const char * spectral_power_edges;
 } ei_dsp_config_spectral_analysis_t;
+
+typedef struct {
+    int axes;
+    float frame_length;
+    float frame_stride;
+    int fft_length;
+    bool show_axes;
+} ei_dsp_config_spectrogram_t;
+
+typedef struct {
+    int axes;
+    float frame_length;
+    float frame_stride;
+    int num_filters;
+    int fft_length;
+    int low_frequency;
+    int high_frequency;
+    float pre_cof;
+} ei_dsp_config_audio_syntiant_t;
 
 ei_dsp_config_mfcc_t ei_dsp_config_3 = {
     1,
