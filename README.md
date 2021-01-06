@@ -23,6 +23,10 @@ Video tutorial:
 
 1. And flash the binary to your micro:bit, by dragging `MICROBIT.hex` onto the `MICROBIT` disk drive.
 
+## Viewing the Machine Learning model
+
+The ML model that powers this project is available on Edge Impulse: [Micro:bit LIVE 2020](https://studio.edgeimpulse.com/public/13079/latest).
+
 ## How to change the keyword
 
 You can build new models using [Edge Impulse](https://docs.edgeimpulse.com/docs).
