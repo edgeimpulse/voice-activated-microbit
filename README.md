@@ -8,7 +8,10 @@ Video tutorial:
 
 ## How to build
 
-1. Install [CMake](https://cmake.org), [Python 2.7](https://www.python.org) and the [GNU ARM Embedded Toolchain](https://developer.arm.com/tools-and-software/open-source-software/developer-tools/gnu-toolchain/gnu-rm). Make sure `arm-none-eabi-gcc` is in your PATH.
+1. Install [CMake](https://cmake.org), [Python 2.7](https://www.python.org) and the [GNU ARM Embedded Toolchain 9](https://developer.arm.com/tools-and-software/open-source-software/developer-tools/gnu-toolchain/gnu-rm). Make sure `arm-none-eabi-gcc` is in your PATH.
+
+    > **Note:** This project currently does not work with GNU ARM Embedded Toolchain 10 ([bug](https://github.com/lancaster-university/codal-microbit-v2/issues/63))!
+
 1. Clone this repository:
 
     ```
