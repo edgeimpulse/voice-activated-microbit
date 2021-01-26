@@ -53,6 +53,24 @@ Once you've trained a model go to **Deployment**, and select **C++ Library**. Th
 1. Rebuild your application.
 1. Your micro:bit now responds to your own keyword 🚀.
 
+### Poor performance due to unbalanced dataset?
+
+Is your model not working properly? Then this is probably due to dataset imbalance (a lot more unknown / noise data compared to your keyword) in combination with our moving average code to reduce false positives.
+
+When running in continuous mode we run a moving average over the predictions to prevent false positives. E.g. if we do 3 classifications per second you’ll see your keyword potentially classified three times (once at the start of the audio file, once in the middle, once at the end). However, if your dataset is unbalanced (there’s a lot more noise / unknown than  in your dataset) the ML model typically manages to only find your keyword in the 'center' window, and thus we filter it out as a false positive.
+
+You can fix this by either:
+
+1. Add more data :-)
+2. Or, disable moving average by going into ei_run_classifier.h (in the edge-impulse-sdk directory) and removing:
+
+    ```
+        for (size_t ix = 0; ix < EI_CLASSIFIER_LABEL_COUNT; ix++) {
+            result->classification[ix].value =
+                run_moving_average_filter(&classifier_maf[ix], result->classification[ix].value);
+        }
+    ```
+
 ## Use the power of the crowd to collect keywords
 
 Alternatively you can use the power of the crowd to collect your keywords. This is very useful in a STEM or conference setting. For this you'll need an API key, which you'll find under **Dashboard > Keys > Add new API key**.
