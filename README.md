@@ -6,7 +6,7 @@ Video tutorial:
 
 [![Voice-activated micro:bit](assets/video-front-v2.jpg)](https://www.youtube.com/watch?v=fNSKWdIxh8o&feature=youtu.be)
 
-## How to build
+## How to build (local)
 
 1. Install [CMake](https://cmake.org), [Python 2.7](https://www.python.org) and the [GNU ARM Embedded Toolchain 9](https://developer.arm.com/tools-and-software/open-source-software/developer-tools/gnu-toolchain/gnu-rm). Make sure `arm-none-eabi-gcc` is in your PATH.
 
@@ -22,6 +22,22 @@ Video tutorial:
 
     ```
     $ python build.py
+    ```
+
+1. And flash the binary to your micro:bit, by dragging `MICROBIT.hex` onto the `MICROBIT` disk drive.
+
+## How to build (Docker)
+
+1. Build the container:
+
+    ```
+    $ docker build -t microbit_ei_build .
+    ```
+
+1. Build the project:
+
+    ```
+    $ docker run --rm -v $PWD:/app microbit_ei_build
     ```
 
 1. And flash the binary to your micro:bit, by dragging `MICROBIT.hex` onto the `MICROBIT` disk drive.
