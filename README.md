@@ -66,6 +66,9 @@ Once you've trained a model go to **Deployment**, and select **C++ Library**. Th
 1. Remove `source/edge-impulse-sdk`, `source/model-parameters` and `source/tflite-model`.
 1. Drag the content of the ZIP file into the `source` folder.
 1. If you've picked a different keyword, change this in [source/MicrophoneInferenceTest.cpp](source/MicrophoneInferenceTest.cpp).
+
+    > Note: the name used for the label of the training-set should correspond exactly to the ```#define INFERENCING_KEYWORD```
+
 1. Rebuild your application.
 1. Your micro:bit now responds to your own keyword 🚀.
 
@@ -102,7 +105,7 @@ Where you replace:
 * `ei_XXX` with your API key.
 * `30000` with the desired length that people need to record for in milliseconds (here 30000 = 30 seconds).
 * `microbit` with the keyword people should say.
-* `frequency` the audio frequency. Keep this at 11KHz for the micro:bit 2.
+* `frequency` the audio frequency. Keep this at 11KHz for the micro:bit v2.
 
 You can share this link f.e. via a QR code (you generate one [here](https://www.the-qrcode-generator.com) to easily include in a presentation).
 
