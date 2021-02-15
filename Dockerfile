@@ -21,10 +21,16 @@ RUN mkdir -p /app-gcc
 
 RUN wget -q https://developer.arm.com/-/media/Files/downloads/gnu-rm/9-2020q2/gcc-arm-none-eabi-9-2020-q2-update-x86_64-linux.tar.bz2 \
     && tar -xf gcc-arm-none-eabi-9-2020-q2-update-x86_64-linux.tar.bz2 -C /app-gcc --strip-components=1 \
-    &&  rm gcc-arm-none-eabi-9-2020-q2-update-x86_64-linux.tar.bz2
+    && rm gcc-arm-none-eabi-9-2020-q2-update-x86_64-linux.tar.bz2
 
 ENV PATH="/app-gcc/bin:${PATH}"
 
+RUN apt install -y rsync
+
 WORKDIR /app
 
-CMD ["python", "build.py"]
+COPY . ./
+
+RUN python build.py
+
+CMD ["/bin/bash", "/data/build.sh"]

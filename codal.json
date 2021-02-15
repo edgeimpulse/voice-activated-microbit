@@ -2,7 +2,7 @@
     "target": {
         "name": "codal-microbit-v2",
         "url": "https://github.com/Lancaster-University/codal-microbit-v2",
-        "branch": "master",
+        "branch": "d49c441bb712bc02bf2c7e4d95b757721eb54e4a",
         "type": "git",
         "test_ignore": true,
         "dev": true

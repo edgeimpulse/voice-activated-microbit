@@ -36,9 +36,18 @@ Video tutorial:
 
 1. Build the project:
 
+    **macOS, Linux**
+
     ```
-    $ docker run --rm -v $PWD:/app microbit_ei_build
+    $ docker run --rm -v $PWD:/data microbit_ei_build
     ```
+
+    **Windows**
+
+    ```
+    $ docker run --rm -v "%cd%":/data microbit_ei_build
+    ```
+
 
 1. And flash the binary to your micro:bit, by dragging `MICROBIT.hex` onto the `MICROBIT` disk drive.
 
