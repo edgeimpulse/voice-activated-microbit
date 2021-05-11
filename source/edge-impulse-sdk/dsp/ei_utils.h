@@ -1,5 +1,5 @@
 /* Edge Impulse inferencing library
- * Copyright (c) 2021 EdgeImpulse Inc.
+ * Copyright (c) 2020 EdgeImpulse Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -19,20 +19,6 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
+#pragma once
 
-#include "../ei_classifier_porting.h"
-#if EI_PORTING_ARDUINO == 1
-
-#include "tensorflow/lite/micro/debug_log.h"
-#include <stdio.h>
-#include <stdarg.h>
-
-// On mbed platforms, we set up a serial port and write to it for debug logging.
-#if defined(__cplusplus) && EI_C_LINKAGE == 1
-extern "C"
-#endif // defined(__cplusplus) && EI_C_LINKAGE == 1
-void DebugLog(const char* s) {
-    ei_printf("%s", s);
-}
-
-#endif // EI_PORTING_ARDUINO
+#define ARRAY_LENGTH(array) (sizeof((array))/sizeof((array)[0]))

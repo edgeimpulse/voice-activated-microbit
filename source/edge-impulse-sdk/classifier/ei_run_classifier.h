@@ -1,5 +1,5 @@
 /* Edge Impulse inferencing library
- * Copyright (c) 2020 EdgeImpulse Inc.
+ * Copyright (c) 2021 EdgeImpulse Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -89,7 +89,14 @@ static ai_handle network = AI_HANDLE_NULL;
 #include "tflite-model/trained_model_compiled.h"
 #include "edge-impulse-sdk/classifier/ei_aligned_malloc.h"
 
+#elif EI_CLASSIFIER_INFERENCING_ENGINE == EI_CLASSIFIER_TFLITE_FULL
 
+#include "tensorflow/lite/c/common.h"
+#include "tensorflow/lite/interpreter.h"
+#include "tensorflow/lite/kernels/register.h"
+#include "tensorflow/lite/model.h"
+#include "tensorflow/lite/optional_debug_tools.h"
+#include "tflite-model/tflite-trained.h"
 
 #elif EI_CLASSIFIER_INFERENCING_ENGINE == EI_CLASSIFIER_NONE
 // noop
@@ -143,7 +150,11 @@ extern "C" float run_moving_average_filter(ei_impulse_maf *maf, float classifica
         maf->buf_idx = 0;
     }
 
+#if (EI_CLASSIFIER_SLICES_PER_MODEL_WINDOW > 1)
     return maf->running_sum / (float)(EI_CLASSIFIER_SLICES_PER_MODEL_WINDOW >> 1);
+#else
+    return maf->running_sum;
+#endif
 }
 
 /**
@@ -294,10 +305,10 @@ extern "C" EI_IMPULSE_ERROR run_classifier_continuous(signal_t *signal, ei_impul
 
         ei_impulse_error = run_inference(&classify_matrix, result, debug);
 
-        for (size_t ix = 0; ix < EI_CLASSIFIER_LABEL_COUNT; ix++) {
-            result->classification[ix].value =
-                run_moving_average_filter(&classifier_maf[ix], result->classification[ix].value);
-        }
+        // for (size_t ix = 0; ix < EI_CLASSIFIER_LABEL_COUNT; ix++) {
+        //     result->classification[ix].value =
+        //         run_moving_average_filter(&classifier_maf[ix], result->classification[ix].value);
+        // }
 
         /* Shift the feature buffer for new data */
         for (size_t i = 0; i < (EI_CLASSIFIER_NN_INPUT_FRAME_SIZE - feature_size); i++) {
@@ -529,6 +540,7 @@ extern "C" EI_IMPULSE_ERROR run_inference(
             // Quantize the input if it is int8
             if (int8_input) {
                 input->data.int8[ix] = static_cast<int8_t>(round(fmatrix->buffer[ix] / input->params.scale) + input->params.zero_point);
+                // printf("float %ld : %d\r\n", ix, input->data.int8[ix]);
             } else {
                 input->data.f[ix] = fmatrix->buffer[ix];
             }
@@ -653,6 +665,82 @@ extern "C" EI_IMPULSE_ERROR run_inference(
         result->classification[ix].label = ei_classifier_inferencing_categories[ix];
         result->classification[ix].value = v;
     }
+
+#elif EI_CLASSIFIER_INFERENCING_ENGINE == EI_CLASSIFIER_TFLITE_FULL
+
+    {
+        static std::unique_ptr<tflite::FlatBufferModel> model = nullptr;
+        static std::unique_ptr<tflite::Interpreter> interpreter = nullptr;
+        if (!model) {
+            model = tflite::FlatBufferModel::BuildFromBuffer((const char*)trained_tflite, trained_tflite_len);
+            if (!model) {
+                ei_printf("Failed to build TFLite model from buffer\n");
+                return EI_IMPULSE_TFLITE_ERROR;
+            }
+
+            tflite::ops::builtin::BuiltinOpResolver resolver;
+            tflite::InterpreterBuilder builder(*model, resolver);
+            builder(&interpreter);
+
+            if (!interpreter) {
+                ei_printf("Failed to construct interpreter\n");
+                return EI_IMPULSE_TFLITE_ERROR;
+            }
+
+            if (interpreter->AllocateTensors() != kTfLiteOk) {
+                ei_printf("AllocateTensors failed\n");
+                return EI_IMPULSE_TFLITE_ERROR;
+            }
+        }
+
+        // Obtain pointers to the model's input and output tensors.
+    #if EI_CLASSIFIER_TFLITE_INPUT_QUANTIZED == 1
+        int8_t* input = interpreter->typed_input_tensor<int8_t>(0);
+    #else
+        float* input = interpreter->typed_input_tensor<float>(0);
+    #endif
+        for (uint16_t ix = 0; ix < fmatrix->rows * fmatrix->cols; ix++) {
+    #if EI_CLASSIFIER_TFLITE_INPUT_QUANTIZED == 1
+            input[ix] = static_cast<int8_t>(round(fmatrix->buffer[ix] / EI_CLASSIFIER_TFLITE_INPUT_SCALE) + EI_CLASSIFIER_TFLITE_INPUT_ZEROPOINT);
+    #else
+            input[ix] = fmatrix->buffer[ix];
+    #endif
+        }
+
+        uint64_t ctx_start_ms = ei_read_timer_ms();
+
+        interpreter->Invoke();
+
+        uint64_t ctx_end_ms = ei_read_timer_ms();
+
+        result->timing.classification = ctx_end_ms - ctx_start_ms;
+    #if EI_CLASSIFIER_TFLITE_OUTPUT_QUANTIZED == 1
+        int8_t* out_data = interpreter->typed_output_tensor<int8_t>(0);
+    #else
+        float* out_data = interpreter->typed_output_tensor<float>(0);
+    #endif
+
+        if (debug) {
+            ei_printf("Predictions (time: %d ms.):\n", result->timing.classification);
+        }
+        for (uint32_t ix = 0; ix < EI_CLASSIFIER_LABEL_COUNT; ix++) {
+    #if EI_CLASSIFIER_TFLITE_OUTPUT_QUANTIZED == 1
+            float v = static_cast<float>(out_data[ix] - EI_CLASSIFIER_TFLITE_OUTPUT_ZEROPOINT) * EI_CLASSIFIER_TFLITE_OUTPUT_SCALE;
+    #else
+            float v = out_data[ix];
+    #endif
+            if (debug) {
+                ei_printf("%s:\t", ei_classifier_inferencing_categories[ix]);
+                ei_printf_float(v);
+                ei_printf("\n");
+            }
+            result->classification[ix].label = ei_classifier_inferencing_categories[ix];
+            result->classification[ix].value = v;
+        }
+
+        // on Linux we're not worried about free'ing
+    }
+
 #endif
 
 #if EI_CLASSIFIER_HAS_ANOMALY == 1
@@ -664,6 +752,215 @@ extern "C" EI_IMPULSE_ERROR run_inference(
         float input[EI_CLASSIFIER_ANOM_AXIS_SIZE];
         for (size_t ix = 0; ix < EI_CLASSIFIER_ANOM_AXIS_SIZE; ix++) {
             input[ix] = fmatrix->buffer[EI_CLASSIFIER_ANOM_AXIS[ix]];
+        }
+        standard_scaler(input, ei_classifier_anom_scale, ei_classifier_anom_mean, EI_CLASSIFIER_ANOM_AXIS_SIZE);
+        float anomaly = get_min_distance_to_cluster(
+            input, EI_CLASSIFIER_ANOM_AXIS_SIZE, ei_classifier_anom_clusters, EI_CLASSIFIER_ANOM_CLUSTER_COUNT);
+
+        uint64_t anomaly_end_ms = ei_read_timer_ms();
+
+        if (debug) {
+            ei_printf("Anomaly score (time: %d ms.): ", static_cast<int>(anomaly_end_ms - anomaly_start_ms));
+            ei_printf_float(anomaly);
+            ei_printf("\n");
+        }
+
+        result->timing.anomaly = anomaly_end_ms - anomaly_start_ms;
+
+        result->anomaly = anomaly;
+    }
+
+#endif
+
+    if (ei_run_impulse_check_canceled() == EI_IMPULSE_CANCELED) {
+        return EI_IMPULSE_CANCELED;
+    }
+
+    return EI_IMPULSE_OK;
+}
+
+extern "C" EI_IMPULSE_ERROR run_inference_i16(
+    ei::matrix_i32_t *fmatrix,
+    ei_impulse_result_t *result,
+    bool debug = false)
+{
+#if (EI_CLASSIFIER_INFERENCING_ENGINE == EI_CLASSIFIER_TFLITE)
+    {
+        uint64_t ctx_start_ms;
+        TfLiteTensor* input;
+        TfLiteTensor* output;
+        uint8_t* tensor_arena;
+
+#if (EI_CLASSIFIER_COMPILED == 1)
+        EI_IMPULSE_ERROR init_res = inference_tflite_setup(&ctx_start_ms, &input, &output, &tensor_arena);
+#else
+        tflite::MicroInterpreter* interpreter;
+        EI_IMPULSE_ERROR init_res = inference_tflite_setup(&ctx_start_ms, &input, &output, &interpreter, &tensor_arena);
+#endif
+        if (init_res != EI_IMPULSE_OK) {
+            return init_res;
+        }
+
+        EIDSP_i16 scale;
+        numpy::float_to_int16(&input->params.scale, &scale, 1);
+
+        // Place our calculated x value in the model's input tensor
+        bool int8_input = input->type == TfLiteType::kTfLiteInt8;
+        for (size_t ix = 0; ix < fmatrix->rows * fmatrix->cols; ix++) {
+            // Quantize the input if it is int8
+            if (int8_input) {
+                int32_t calc = (int32_t)fmatrix->buffer[ix] << 8; // Shift for scaler
+                calc /= scale;
+                calc += 0x80; // Round by adding 0.5
+                calc >>= 8; // Shift to int8_t domain
+                input->data.int8[ix] = static_cast<int8_t>(calc + input->params.zero_point);
+            } else {
+                numpy::int16_to_float((EIDSP_i16 *)&fmatrix->buffer[ix], &input->data.f[ix], 1);
+            }
+        }
+
+#if (EI_CLASSIFIER_COMPILED == 1)
+        EI_IMPULSE_ERROR run_res = inference_tflite_run(ctx_start_ms, output, tensor_arena, result, debug);
+#else
+        EI_IMPULSE_ERROR run_res = inference_tflite_run(ctx_start_ms, output, interpreter, tensor_arena, result, debug);
+#endif
+
+        if (run_res != EI_IMPULSE_OK) {
+            return run_res;
+        }
+    }
+
+#elif EI_CLASSIFIER_INFERENCING_ENGINE == EI_CLASSIFIER_CUBEAI
+
+    if (!network) {
+#if defined(STM32H7)
+        /* By default the CRC IP clock is enabled */
+        __HAL_RCC_CRC_CLK_ENABLE();
+#else
+        if (!__HAL_RCC_CRC_IS_CLK_ENABLED()) {
+            ei_printf("W: CRC IP clock is NOT enabled\r\n");
+        }
+
+        /* By default the CRC IP clock is enabled */
+        __HAL_RCC_CRC_CLK_ENABLE();
+#endif
+
+        ai_error err;
+
+        if (debug) {
+            ei_printf("Creating network...\n");
+        }
+
+        // create the network
+        err = ai_network_create(&network, (const ai_buffer*)AI_NETWORK_DATA_CONFIG);
+        if (err.type != AI_ERROR_NONE) {
+            ei_printf("CubeAI error - type=%d code=%d\r\n", err.type, err.code);
+            return EI_IMPULSE_CUBEAI_ERROR;
+        }
+
+        const ai_network_params params = {
+           AI_NETWORK_DATA_WEIGHTS(ai_network_data_weights_get()),
+           AI_NETWORK_DATA_ACTIVATIONS(activations) };
+
+        if (debug) {
+            ei_printf("Initializing network...\n");
+        }
+
+        if (!ai_network_init(network, &params)) {
+            err = ai_network_get_error(network);
+            ei_printf("CubeAI error - type=%d code=%d\r\n", err.type, err.code);
+            return EI_IMPULSE_CUBEAI_ERROR;
+        }
+    }
+
+    uint64_t ctx_start_ms = ei_read_timer_ms();
+
+#if EI_CLASSIFIER_CUBEAI_QUANTIZED_IN_OUT == 1
+    ai_network_report report;
+    ai_network_get_info(network, &report);
+    const ai_buffer *input = &report.inputs[0];
+    const ai_float input_scale = AI_BUFFER_META_INFO_INTQ_GET_SCALE(input->meta_info, 0);
+    const int input_zero_point = AI_BUFFER_META_INFO_INTQ_GET_ZEROPOINT(input->meta_info, 0);
+    const ai_buffer *output = &report.outputs[0];
+    const ai_float output_scale = AI_BUFFER_META_INFO_INTQ_GET_SCALE(output->meta_info, 0);
+    const int output_zero_point = AI_BUFFER_META_INFO_INTQ_GET_ZEROPOINT(output->meta_info, 0);
+
+    // No idea why this is necessary but UART1 stops working on ST IoT Discovery Kit otherwise?!
+    HAL_Delay(1);
+
+    for (int ix = 0; ix < fmatrix->rows * fmatrix->cols; ix++) {
+        in_data[ix] = static_cast<int8_t>(round(fmatrix->buffer[ix] / input_scale) + input_zero_point);
+    }
+#else
+    // fmatrix->buffer <-- input data
+    // memcpy(in_data, fmatrix->buffer, AI_NETWORK_IN_1_SIZE * sizeof(float));
+    int16_to_float(fmatrix->buffer, in_data, AI_NETWORK_IN_1_SIZE);
+    for(int i = 0; i < AI_NETWORK_IN_1_SIZE; i++) {
+        in_data[i] = (float)fmatrix->buffer[i] / 32768.f;
+    }
+#endif
+
+    ai_i32 n_batch;
+    ai_error err;
+
+    /* 1 - Create the AI buffer IO handlers */
+    ai_buffer ai_input[AI_NETWORK_IN_NUM] = AI_NETWORK_IN ;
+    ai_buffer ai_output[AI_NETWORK_OUT_NUM] = AI_NETWORK_OUT ;
+
+    /* 2 - Initialize input/output buffer handlers */
+    ai_input[0].n_batches = 1;
+    ai_input[0].data = AI_HANDLE_PTR(in_data);
+    ai_output[0].n_batches = 1;
+    ai_output[0].data = AI_HANDLE_PTR(out_data);
+
+    /* 3 - Perform the inference */
+    n_batch = ai_network_run(network, &ai_input[0], &ai_output[0]);
+    if (n_batch != 1) {
+        err = ai_network_get_error(network);
+        ei_printf("CubeAI error - type=%d code=%d\r\n", err.type, err.code);
+        return EI_IMPULSE_CUBEAI_ERROR;
+    }
+
+    uint64_t ctx_end_ms = ei_read_timer_ms();
+
+    result->timing.classification = ctx_end_ms - ctx_start_ms;
+
+    if (debug) {
+        ei_printf("Predictions (time: %d ms.):\n", result->timing.classification);
+    }
+    for (uint32_t ix = 0; ix < EI_CLASSIFIER_LABEL_COUNT; ix++) {
+#if EI_CLASSIFIER_CUBEAI_QUANTIZED_IN_OUT == 1
+        float v = static_cast<float>(out_data[ix] - output_zero_point) * output_scale;
+#else
+        float v = out_data[ix];
+#endif
+        if (debug) {
+            ei_printf("%s:\t", ei_classifier_inferencing_categories[ix]);
+            ei_printf_float(v);
+            ei_printf("\n");
+        }
+        result->classification[ix].label = ei_classifier_inferencing_categories[ix];
+        result->classification[ix].value = v;
+    }
+
+#elif EI_CLASSIFIER_INFERENCING_ENGINE == EI_CLASSIFIER_TFLITE_FULL
+
+    ei_printf("ERR: run_classifier_i16 is not supported with full TensorFlow Lite\n");
+    return EI_IMPULSE_TFLITE_ERROR;
+
+#endif
+
+#if EI_CLASSIFIER_HAS_ANOMALY == 1
+
+    // Anomaly detection
+    {
+        uint64_t anomaly_start_ms = ei_read_timer_ms();
+
+        float input[EI_CLASSIFIER_ANOM_AXIS_SIZE];
+        for (size_t ix = 0; ix < EI_CLASSIFIER_ANOM_AXIS_SIZE; ix++) {
+            // input[ix] = fmatrix->buffer[EI_CLASSIFIER_ANOM_AXIS[ix]];
+            // numpy::int16_to_float(&fmatrix->buffer[EI_CLASSIFIER_ANOM_AXIS[ix]], &input[ix], 1);
+            input[ix] = (float)fmatrix->buffer[EI_CLASSIFIER_ANOM_AXIS[ix]] / 32768.f;
         }
         standard_scaler(input, ei_classifier_anom_scale, ei_classifier_anom_mean, EI_CLASSIFIER_ANOM_AXIS_SIZE);
         float anomaly = get_min_distance_to_cluster(
@@ -703,7 +1000,7 @@ extern "C" EI_IMPULSE_ERROR run_classifier(
     ei_impulse_result_t *result,
     bool debug = false)
 {
-#if EI_CLASSIFIER_TFLITE_INPUT_QUANTIZED == 1
+#if EI_CLASSIFIER_TFLITE_INPUT_QUANTIZED == 1 && EI_CLASSIFIER_INFERENCING_ENGINE == EI_CLASSIFIER_TFLITE
     // Shortcut for quantized image models
     if (can_run_classifier_image_quantized() == EI_IMPULSE_OK) {
         return run_classifier_image_quantized(signal, result, debug);
@@ -770,6 +1067,65 @@ extern "C" EI_IMPULSE_ERROR run_classifier(
 
     return run_inference(&features_matrix, result, debug);
 }
+
+#if defined(EI_CLASSIFIER_USE_QUANTIZED_DSP_BLOCK) && EI_CLASSIFIER_USE_QUANTIZED_DSP_BLOCK == 1
+
+extern "C" EI_IMPULSE_ERROR run_classifier_i16(
+    signal_i16_t *signal,
+    ei_impulse_result_t *result,
+    bool debug = false)
+{
+
+    ei::matrix_i32_t features_matrix(1, EI_CLASSIFIER_NN_INPUT_FRAME_SIZE);
+
+    uint64_t dsp_start_ms = ei_read_timer_ms();
+
+    size_t out_features_index = 0;
+
+    for (size_t ix = 0; ix < ei_dsp_blocks_size; ix++) {
+        ei_model_dsp_i16_t block = ei_dsp_blocks_i16[ix];
+
+        if (out_features_index + block.n_output_features > EI_CLASSIFIER_NN_INPUT_FRAME_SIZE) {
+            ei_printf("ERR: Would write outside feature buffer\n");
+            return EI_IMPULSE_DSP_ERROR;
+        }
+
+        ei::matrix_i32_t fm(1, block.n_output_features, features_matrix.buffer + out_features_index);
+
+        int ret = block.extract_fn(signal, &fm, ei_dsp_blocks[ix].config, EI_CLASSIFIER_FREQUENCY);
+
+        if (ret != EIDSP_OK) {
+            ei_printf("ERR: Failed to run DSP process (%d)\n", ret);
+            return EI_IMPULSE_DSP_ERROR;
+        }
+
+        if (ei_run_impulse_check_canceled() == EI_IMPULSE_CANCELED) {
+            return EI_IMPULSE_CANCELED;
+        }
+
+        out_features_index += block.n_output_features;
+    }
+
+    result->timing.dsp = ei_read_timer_ms() - dsp_start_ms;
+
+    if (debug) {
+        ei_printf("Features (%d ms.): ", result->timing.dsp);
+        for (size_t ix = 0; ix < features_matrix.cols; ix++) {
+            ei_printf_float((float)features_matrix.buffer[ix] / 32768.f);
+            ei_printf(" ");
+        }
+        ei_printf("\n");
+    }
+
+#if EI_CLASSIFIER_INFERENCING_ENGINE != EI_CLASSIFIER_NONE
+    if (debug) {
+        ei_printf("Running neural network...\n");
+    }
+#endif
+
+    return run_inference_i16(&features_matrix, result, debug);
+}
+#endif //EI_CLASSIFIER_USE_QUANTIZED_DSP_BLOCK
 
 /**
  * @brief      Calculates the cepstral mean and variable normalization.
@@ -848,70 +1204,10 @@ static void calc_cepstral_mean_and_var_normalization_spectrogram(ei_matrix *matr
     matrix->cols = EI_CLASSIFIER_NN_INPUT_FRAME_SIZE;
 }
 
-
-#if EIDSP_SIGNAL_C_FN_POINTER == 0
-
-/**
- * Run the impulse, if you provide an instance of sampler it will also persist the data for you
- * @param sampler Instance to an **initialized** sampler
- * @param result Object to store the results in
- * @param data_fn Function to retrieve data from sensors
- * @param debug Whether to log debug messages (default false)
- */
-__attribute__((unused)) EI_IMPULSE_ERROR run_impulse(
-#if defined(EI_CLASSIFIER_HAS_SAMPLER) && EI_CLASSIFIER_HAS_SAMPLER == 1
-        EdgeSampler *sampler,
-#endif
-        ei_impulse_result_t *result,
-#ifdef __MBED__
-        mbed::Callback<void(float*, size_t)> data_fn,
-#else
-        std::function<void(float*, size_t)> data_fn,
-#endif
-        bool debug = false) {
-
-    float x[EI_CLASSIFIER_DSP_INPUT_FRAME_SIZE] = { 0 };
-
-    uint64_t next_tick = 0;
-
-    uint64_t sampling_us_start = ei_read_timer_us();
-
-    // grab some data
-    for (int i = 0; i < EI_CLASSIFIER_DSP_INPUT_FRAME_SIZE; i += EI_CLASSIFIER_RAW_SAMPLES_PER_FRAME) {
-        uint64_t curr_us = ei_read_timer_us() - sampling_us_start;
-
-        next_tick = curr_us + (EI_CLASSIFIER_INTERVAL_MS * 1000);
-
-        data_fn(x + i, EI_CLASSIFIER_RAW_SAMPLES_PER_FRAME);
-#if defined(EI_CLASSIFIER_HAS_SAMPLER) && EI_CLASSIFIER_HAS_SAMPLER == 1
-        if (sampler != NULL) {
-            sampler->write_sensor_data(x + i, EI_CLASSIFIER_RAW_SAMPLES_PER_FRAME);
-        }
-#endif
-
-        if (ei_run_impulse_check_canceled() == EI_IMPULSE_CANCELED) {
-            return EI_IMPULSE_CANCELED;
-        }
-
-        while (next_tick > ei_read_timer_us() - sampling_us_start);
-    }
-
-    result->timing.sampling = (ei_read_timer_us() - sampling_us_start) / 1000;
-
-    signal_t signal;
-    int err = numpy::signal_from_buffer(x, EI_CLASSIFIER_DSP_INPUT_FRAME_SIZE, &signal);
-    if (err != 0) {
-        ei_printf("ERR: signal_from_buffer failed (%d)\n", err);
-        return EI_IMPULSE_DSP_ERROR;
-    }
-
-    return run_classifier(&signal, result, debug);
-}
-
 /**
  * Check if the current impulse could be used by 'run_classifier_image_quantized'
  */
-static EI_IMPULSE_ERROR can_run_classifier_image_quantized() {
+__attribute__((unused)) static EI_IMPULSE_ERROR can_run_classifier_image_quantized() {
 #if (EI_CLASSIFIER_INFERENCING_ENGINE != EI_CLASSIFIER_TFLITE)
     return EI_IMPULSE_UNSUPPORTED_INFERENCING_ENGINE;
 #endif
@@ -933,7 +1229,7 @@ static EI_IMPULSE_ERROR can_run_classifier_image_quantized() {
     return EI_IMPULSE_OK;
 }
 
-#if EI_CLASSIFIER_TFLITE_INPUT_QUANTIZED == 1
+#if EI_CLASSIFIER_TFLITE_INPUT_QUANTIZED == 1 && EI_CLASSIFIER_INFERENCING_ENGINE == EI_CLASSIFIER_TFLITE
 /**
  * Special function to run the classifier on images, only works on TFLite models (either interpreter or EON)
  * that allocates a lot less memory by quantizing in place. This only works if 'can_run_classifier_image_quantized'
@@ -1013,7 +1309,126 @@ extern "C" EI_IMPULSE_ERROR run_classifier_image_quantized(
     return EI_IMPULSE_OK;
 #endif // EI_CLASSIFIER_INFERENCING_ENGINE != EI_CLASSIFIER_TFLITE
 }
-#endif // #if EI_CLASSIFIER_TFLITE_INPUT_QUANTIZED == 1
+#endif // #if EI_CLASSIFIER_TFLITE_INPUT_QUANTIZED == 1 && EI_CLASSIFIER_INFERENCING_ENGINE == EI_CLASSIFIER_TFLITE
+
+#if EIDSP_SIGNAL_C_FN_POINTER == 0
+
+/**
+ * Run the impulse, if you provide an instance of sampler it will also persist the data for you
+ * @param sampler Instance to an **initialized** sampler
+ * @param result Object to store the results in
+ * @param data_fn Function to retrieve data from sensors
+ * @param debug Whether to log debug messages (default false)
+ */
+__attribute__((unused)) EI_IMPULSE_ERROR run_impulse(
+#if defined(EI_CLASSIFIER_HAS_SAMPLER) && EI_CLASSIFIER_HAS_SAMPLER == 1
+        EdgeSampler *sampler,
+#endif
+        ei_impulse_result_t *result,
+#ifdef __MBED__
+        mbed::Callback<void(float*, size_t)> data_fn,
+#else
+        std::function<void(float*, size_t)> data_fn,
+#endif
+        bool debug = false) {
+
+    float *x = (float*)calloc(EI_CLASSIFIER_DSP_INPUT_FRAME_SIZE, sizeof(float));
+    if (!x) {
+        return EI_IMPULSE_OUT_OF_MEMORY;
+    }
+
+    uint64_t next_tick = 0;
+
+    uint64_t sampling_us_start = ei_read_timer_us();
+
+    // grab some data
+    for (int i = 0; i < EI_CLASSIFIER_DSP_INPUT_FRAME_SIZE; i += EI_CLASSIFIER_RAW_SAMPLES_PER_FRAME) {
+        uint64_t curr_us = ei_read_timer_us() - sampling_us_start;
+
+        next_tick = curr_us + (EI_CLASSIFIER_INTERVAL_MS * 1000);
+
+        data_fn(x + i, EI_CLASSIFIER_RAW_SAMPLES_PER_FRAME);
+#if defined(EI_CLASSIFIER_HAS_SAMPLER) && EI_CLASSIFIER_HAS_SAMPLER == 1
+        if (sampler != NULL) {
+            sampler->write_sensor_data(x + i, EI_CLASSIFIER_RAW_SAMPLES_PER_FRAME);
+        }
+#endif
+
+        if (ei_run_impulse_check_canceled() == EI_IMPULSE_CANCELED) {
+            free(x);
+            return EI_IMPULSE_CANCELED;
+        }
+
+        while (next_tick > ei_read_timer_us() - sampling_us_start);
+    }
+
+    result->timing.sampling = (ei_read_timer_us() - sampling_us_start) / 1000;
+
+    signal_t signal;
+    int err = numpy::signal_from_buffer(x, EI_CLASSIFIER_DSP_INPUT_FRAME_SIZE, &signal);
+    if (err != 0) {
+        free(x);
+        ei_printf("ERR: signal_from_buffer failed (%d)\n", err);
+        return EI_IMPULSE_DSP_ERROR;
+    }
+
+    EI_IMPULSE_ERROR r = run_classifier(&signal, result, debug);
+    free(x);
+    return r;
+}
+
+#if defined(EI_CLASSIFIER_USE_QUANTIZED_DSP_BLOCK) && EI_CLASSIFIER_USE_QUANTIZED_DSP_BLOCK == 1
+
+__attribute__((unused)) EI_IMPULSE_ERROR run_impulse_i16(
+#if defined(EI_CLASSIFIER_HAS_SAMPLER) && EI_CLASSIFIER_HAS_SAMPLER == 1
+        EdgeSampler *sampler,
+#endif
+        ei_impulse_result_t *result,
+#ifdef __MBED__
+        mbed::Callback<void(signed short*, size_t)> data_fn,
+#else
+        std::function<void(signed short*, size_t)> data_fn,
+#endif
+        bool debug = false) {
+
+    int16_t x[EI_CLASSIFIER_DSP_INPUT_FRAME_SIZE] = { 0 };
+
+    uint64_t next_tick = 0;
+
+    uint64_t sampling_us_start = ei_read_timer_us();
+
+    // grab some data
+    for (int i = 0; i < EI_CLASSIFIER_DSP_INPUT_FRAME_SIZE; i += EI_CLASSIFIER_RAW_SAMPLES_PER_FRAME) {
+        uint64_t curr_us = ei_read_timer_us() - sampling_us_start;
+
+        next_tick = curr_us + (EI_CLASSIFIER_INTERVAL_MS * 1000);
+
+        data_fn(x + i, EI_CLASSIFIER_RAW_SAMPLES_PER_FRAME);
+#if defined(EI_CLASSIFIER_HAS_SAMPLER) && EI_CLASSIFIER_HAS_SAMPLER == 1
+        if (sampler != NULL) {
+            sampler->write_sensor_data(x + i, EI_CLASSIFIER_RAW_SAMPLES_PER_FRAME);
+        }
+#endif
+
+        if (ei_run_impulse_check_canceled() == EI_IMPULSE_CANCELED) {
+            return EI_IMPULSE_CANCELED;
+        }
+
+        while (next_tick > ei_read_timer_us() - sampling_us_start);
+    }
+
+    result->timing.sampling = (ei_read_timer_us() - sampling_us_start) / 1000;
+
+    signal_i16_t signal;
+    int err = numpy::signal_from_buffer_i16(x, EI_CLASSIFIER_DSP_INPUT_FRAME_SIZE, &signal);
+    if (err != 0) {
+        ei_printf("ERR: signal_from_buffer failed (%d)\n", err);
+        return EI_IMPULSE_DSP_ERROR;
+    }
+
+    return run_classifier_i16(&signal, result, debug);
+}
+#endif //EI_CLASSIFIER_USE_QUANTIZED_DSP_BLOCK
 
 #if defined(EI_CLASSIFIER_HAS_SAMPLER) && EI_CLASSIFIER_HAS_SAMPLER == 1
 /**

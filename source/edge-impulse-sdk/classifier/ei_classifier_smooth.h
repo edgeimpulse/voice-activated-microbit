@@ -1,5 +1,5 @@
 /* Edge Impulse inferencing library
- * Copyright (c) 2020 EdgeImpulse Inc.
+ * Copyright (c) 2021 EdgeImpulse Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -113,7 +113,7 @@ const char* ei_classifier_smooth_update(ei_classifier_smooth_t *smooth, ei_impul
             top_result = ix;
             top_count = smooth->count[ix];
         }
-        if (smooth->count[ix] > confidence_threshold) {
+        if (smooth->count[ix] >= confidence_threshold) {
             met_confidence_threshold = true;
         }
     }

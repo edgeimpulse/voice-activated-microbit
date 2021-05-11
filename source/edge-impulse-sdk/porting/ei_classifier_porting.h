@@ -1,5 +1,5 @@
 /* Edge Impulse inferencing library
- * Copyright (c) 2020 EdgeImpulse Inc.
+ * Copyright (c) 2021 EdgeImpulse Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -25,7 +25,7 @@
 
 #include <stdint.h>
 #include <stdlib.h>
-#include "tensorflow/lite/micro/debug_log.h"
+#include "edge-impulse-sdk/tensorflow/lite/micro/debug_log.h"
 
 #if defined(__cplusplus) && EI_C_LINKAGE == 1
 extern "C" {
@@ -41,7 +41,8 @@ typedef enum {
     EI_IMPULSE_CUBEAI_ERROR = -7,
     EI_IMPULSE_ALLOC_FAILED = -8,
     EI_IMPULSE_ONLY_SUPPORTED_FOR_IMAGES = -9,
-    EI_IMPULSE_UNSUPPORTED_INFERENCING_ENGINE = -10
+    EI_IMPULSE_UNSUPPORTED_INFERENCING_ENGINE = -10,
+    EI_IMPULSE_OUT_OF_MEMORY = -11
 } EI_IMPULSE_ERROR;
 
 /**
@@ -65,6 +66,12 @@ uint64_t ei_read_timer_ms();
  */
 uint64_t ei_read_timer_us();
 
+/**
+ * Set Serial baudrate
+ */
+void ei_serial_set_baudrate(int baudrate);
+
+void ei_printf(const char *format, ...);
 /**
  * Print wrapper around printf()
  * This is used internally to print debug information.
@@ -158,6 +165,14 @@ void ei_free(void *ptr);
 #define EI_PORTING_HIMAX        1
 #else
 #define EI_PORTING_HIMAX        0
+#endif
+#endif
+
+#ifndef EI_PORTING_MINGW32
+#ifdef __MINGW32__
+#define EI_PORTING_MINGW32      1
+#else
+#define EI_PORTING_MINGW32      0
 #endif
 #endif
 // End load porting layer depending on target

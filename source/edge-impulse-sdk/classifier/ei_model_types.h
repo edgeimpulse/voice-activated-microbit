@@ -1,5 +1,5 @@
 /* Edge Impulse inferencing library
- * Copyright (c) 2020 EdgeImpulse Inc.
+ * Copyright (c) 2021 EdgeImpulse Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -31,5 +31,11 @@ typedef struct {
     int (*extract_fn)(ei::signal_t *signal, ei::matrix_t *output_matrix, void *config, const float frequency);
     void *config;
 } ei_model_dsp_t;
+
+typedef struct {
+    size_t n_output_features;
+    int (*extract_fn)(ei::signal_i16_t *signal, ei::matrix_i32_t *output_matrix, void *config, const float frequency);
+    void *config;
+} ei_model_dsp_i16_t;
 
 #endif // _EDGE_IMPULSE_MODEL_TYPES_H_

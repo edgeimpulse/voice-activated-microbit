@@ -1,5 +1,5 @@
 /* Edge Impulse inferencing library
- * Copyright (c) 2020 EdgeImpulse Inc.
+ * Copyright (c) 2021 EdgeImpulse Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -39,7 +39,8 @@ typedef enum {
     EIDSP_UNEXPECTED_NEXT_OFFSET = -1009,
     EIDSP_OUT_OF_BOUNDS = -1010,
     EIDSP_UNSUPPORTED_FILTER_CONFIG = -1011,
-    EIDSP_NARROWING = -1012
+    EIDSP_NARROWING = -1012,
+    EIDSP_BLOCK_VERSION_INCORRECT = -1013
 } EIDSP_RETURN_T;
 
 } // namespace ei
