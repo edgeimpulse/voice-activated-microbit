@@ -68,7 +68,9 @@ You can build new models using [Edge Impulse](https://docs.edgeimpulse.com/docs)
 1. After uploading click the three dots, select *Split sample* and click *Split* to slice your data in 1 second chunks.
 1. Follow [these steps](https://docs.edgeimpulse.com/docs/audio-classification#4-design-an-impulse) to train your model.
 
-    > Note: use window length 999 instead of 1000!
+    Make sure to set the frequency to `11000`:
+
+    ![11000Hz](assets/create-impulse.png)
 
 Once you've trained a model go to **Deployment**, and select **C++ Library**. Then:
 
@@ -90,7 +92,7 @@ When running in continuous mode we run a moving average over the predictions to 
 You can fix this by either:
 
 1. Add more data :-)
-2. Or, disable moving average by going into ei_run_classifier.h (in the edge-impulse-sdk directory) and removing:
+2. Or, disable the moving average filter by going into `ei_run_classifier.h` (in the edge-impulse-sdk directory) and removing:
 
     ```
         for (size_t ix = 0; ix < EI_CLASSIFIER_LABEL_COUNT; ix++) {
@@ -101,7 +103,7 @@ You can fix this by either:
 
 ## Use the power of the crowd to collect keywords
 
-Alternatively you can use the power of the crowd to collect your keywords. This is very useful in a STEM or conference setting. For this you'll need an API key, which you'll find under **Dashboard > Keys > Add new API key**.
+You can use the power of the crowd to collect your keywords. This is very useful in a STEM or conference setting ([here's a video of it in action](https://youtu.be/JOVrqi9lU6s?t=449)). For this you'll need an API key, which you'll find under **Dashboard > Keys > Add new API key**.
 
 Then construct the following URL:
 
