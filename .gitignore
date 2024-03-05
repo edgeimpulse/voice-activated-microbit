@@ -11,3 +11,4 @@ Makefile
 pxtapp
 buildcache.json
 *.pyc
+libraries/codal-microbit-v2/docs/
