@@ -6,27 +6,7 @@ Video tutorial:
 
 [![Voice-activated micro:bit](assets/video-front-v2.jpg)](https://www.youtube.com/watch?v=fNSKWdIxh8o&feature=youtu.be)
 
-## How to build (local)
-
-1. Install [CMake](https://cmake.org), [Python 2.7](https://www.python.org) and the [GNU ARM Embedded Toolchain 9](https://developer.arm.com/tools-and-software/open-source-software/developer-tools/gnu-toolchain/gnu-rm). Make sure `arm-none-eabi-gcc` is in your PATH.
-
-    > **Note:** This project currently does not work with GNU ARM Embedded Toolchain 10 ([bug](https://github.com/lancaster-university/codal-microbit-v2/issues/63))!
-
-1. Clone this repository:
-
-    ```
-    $ git clone https://github.com/edgeimpulse/voice-activated-microbit
-    ```
-
-1. Build the project:
-
-    ```
-    $ python build.py
-    ```
-
-1. And flash the binary to your micro:bit, by dragging `MICROBIT.hex` onto the `MICROBIT` disk drive.
-
-## How to build (Docker)
+## How to build (Docker) - recommended!
 
 1. Build the container:
 
@@ -48,6 +28,26 @@ Video tutorial:
     $ docker run --rm -v "%cd%":/data microbit_ei_build
     ```
 
+
+1. And flash the binary to your micro:bit, by dragging `MICROBIT.hex` onto the `MICROBIT` disk drive.
+
+## How to build (local)
+
+1. Install [CMake](https://cmake.org), [Python 2.7](https://www.python.org) and the [GNU ARM Embedded Toolchain 9](https://developer.arm.com/tools-and-software/open-source-software/developer-tools/gnu-toolchain/gnu-rm). Make sure `arm-none-eabi-gcc` is in your PATH.
+
+    > **Note:** This project currently does not work with GNU ARM Embedded Toolchain 10 ([bug](https://github.com/lancaster-university/codal-microbit-v2/issues/63))!
+
+1. Clone this repository:
+
+    ```
+    $ git clone https://github.com/edgeimpulse/voice-activated-microbit
+    ```
+
+1. Build the project:
+
+    ```
+    $ python build.py
+    ```
 
 1. And flash the binary to your micro:bit, by dragging `MICROBIT.hex` onto the `MICROBIT` disk drive.
 
