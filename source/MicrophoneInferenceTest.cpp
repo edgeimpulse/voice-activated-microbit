@@ -38,11 +38,32 @@ static StreamNormalizer *processor = NULL;
 static inference_t inference;
 
 /**
+ * Convert an int8_t buffer into a float buffer, maps to -1..1
+ * @param input
+ * @param output
+ * @param length
+ * @returns 0 if OK
+ */
+static int int8_to_float(const EIDSP_i8 *input, float *output, size_t length) {
+#if EIDSP_USE_CMSIS_DSP
+    arm_q7_to_float((q7_t *)input, output, length);
+#else
+    for (size_t ix = 0; ix < length; ix++) {
+        output[ix] = (float)(input[ix]) / 128;
+    }
+#endif
+    return EIDSP_OK;
+}
+
+/**
  * Get raw audio signal data
  */
 static int microphone_audio_signal_get_data(size_t offset, size_t length, float *out_ptr)
 {
-    numpy::int8_to_float(&inference.buffers[inference.buf_select ^ 1][offset], out_ptr, length);
+    int v = int8_to_float(&inference.buffers[inference.buf_select ^ 1][offset], out_ptr, length);
+    if (v != EIDSP_OK) {
+        return v;
+    }
     return 0;
 }
 
