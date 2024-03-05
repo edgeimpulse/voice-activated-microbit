@@ -1,0 +1,15 @@
+build
+.yotta.json
+yotta_modules
+yotta_targets
+*.swp
+*~
+Makefile
+*.hex
+*.DS_Store
+.vscode
+*.uf2
+*.bin
+pxtapp
+buildcache.json
+codal.json

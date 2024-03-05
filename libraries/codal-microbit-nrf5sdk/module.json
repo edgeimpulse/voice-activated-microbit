@@ -1,0 +1,9 @@
+{
+  "name": "codal-microbit-nrf5sdk",
+  "version": "0.0.1",
+  "description": "Required files from the nRF5SDK used by codal-microbit",
+  "license": "MIT",
+  "targetDependencies": {},
+  "scripts": {
+  }
+}
